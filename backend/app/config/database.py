@@ -1,7 +1,8 @@
 from sqlalchemy import create_engine
 from app.models.db_models import Base
+import os
 
-DATABASE_URL = "postgresql://postgres:Ritom100@host.docker.internal:5433/opsboard"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL)
 

@@ -2,6 +2,8 @@ services:
   backend:
     build: ./backend
     container_name: opsboard-backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:Ritom100@host.docker.internal:5433/opsboard
     ports:
       - "8000:8000"
 
