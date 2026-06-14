@@ -1,11 +1,12 @@
 import { useState } from "react"
+import API_BASE_URL from "../config";
 
 function CreateIncident({ onIncidentCreated }) {
   const [title, setTitle] = useState("")
   const [severity, setSeverity] = useState("Low")
 
   const createIncident = async () => {
-    const response = await fetch("http://127.0.0.1:8000/incidents", {
+    const response = await fetch(`${API_BASE_URL}/incidents`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

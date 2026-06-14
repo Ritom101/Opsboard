@@ -1,8 +1,10 @@
+import API_BASE_URL from "../config";
+
 function IncidentCard({ incident, onIncidentUpdated }) {
 
   const markResolved = async () => {
     const response = await fetch(
-      `http://127.0.0.1:8000/incidents/${incident.id}?status=resolve`,
+      `${API_BASE_URL}/incidents/${incident.id}?status=resolve`,
       {
         method: "PUT",
       }
@@ -15,7 +17,7 @@ function IncidentCard({ incident, onIncidentUpdated }) {
 
   const deleteIncident = async () => {
     const response = await fetch(
-      `http://127.0.0.1:8000/incidents/${incident.id}`,
+      `${API_BASE_URL}/incidents/${incident.id}`,
       {
         method: "DELETE",
       }
