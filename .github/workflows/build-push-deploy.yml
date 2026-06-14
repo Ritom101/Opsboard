@@ -1,0 +1,165 @@
+name: Build Push Deploy to AKS
+
+on:
+  push:
+    branches:
+      - devops
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: opsboardacr2026
+  ACR_LOGIN_SERVER: opsboardacr2026.azurecr.io
+
+  AKS_CLUSTER_NAME: Opsboard-project
+  AKS_RESOURCE_GROUP: Opsboard-RG
+
+  NAMESPACE: opsboard
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      ##################################################
+      # AZURE LOGIN (OIDC)
+      ##################################################
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      ##################################################
+      # ACR LOGIN
+      ##################################################
+
+      - name: Login to ACR
+        run: |
+          az acr login --name $ACR_NAME
+
+      ##################################################
+      # BUILD BACKEND IMAGE
+      ##################################################
+
+      - name: Build Backend Image
+        run: |
+          docker build \
+            -t $ACR_LOGIN_SERVER/opsboard-backend:latest \
+            -t $ACR_LOGIN_SERVER/opsboard-backend:${{ github.sha }} \
+            ./backend
+
+      ##################################################
+      # PUSH BACKEND IMAGE
+      ##################################################
+
+      - name: Push Backend Image
+        run: |
+          docker push $ACR_LOGIN_SERVER/opsboard-backend:latest
+          docker push $ACR_LOGIN_SERVER/opsboard-backend:${{ github.sha }}
+
+      ##################################################
+      # BUILD FRONTEND IMAGE
+      ##################################################
+
+      - name: Build Frontend Image
+        run: |
+          docker build \
+            -t $ACR_LOGIN_SERVER/opsboard-frontend:latest \
+            -t $ACR_LOGIN_SERVER/opsboard-frontend:${{ github.sha }} \
+            ./frontend
+
+      ##################################################
+      # PUSH FRONTEND IMAGE
+      ##################################################
+
+      - name: Push Frontend Image
+        run: |
+          docker push $ACR_LOGIN_SERVER/opsboard-frontend:latest
+          docker push $ACR_LOGIN_SERVER/opsboard-frontend:${{ github.sha }}
+
+      ##################################################
+      # INSTALL kubectl
+      ##################################################
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      ##################################################
+      # INSTALL kubelogin
+      ##################################################
+
+      - name: Install kubelogin
+        run: |
+          az aks install-cli
+
+      ##################################################
+      # CONNECT TO AKS
+      ##################################################
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group $AKS_RESOURCE_GROUP \
+            --name $AKS_CLUSTER_NAME \
+            --overwrite-existing
+
+      ##################################################
+      # UPDATE BACKEND
+      ##################################################
+
+      - name: Update Backend Deployment
+        run: |
+          kubectl set image deployment/backend \
+            backend=$ACR_LOGIN_SERVER/opsboard-backend:${{ github.sha }} \
+            -n $NAMESPACE
+
+      ##################################################
+      # UPDATE FRONTEND
+      ##################################################
+
+      - name: Update Frontend Deployment
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=$ACR_LOGIN_SERVER/opsboard-frontend:${{ github.sha }} \
+            -n $NAMESPACE
+
+      ##################################################
+      # WAIT FOR ROLLOUT
+      ##################################################
+
+      - name: Wait for Backend Rollout
+        run: |
+          kubectl rollout status deployment/backend \
+            -n $NAMESPACE \
+            --timeout=300s
+
+      - name: Wait for Frontend Rollout
+        run: |
+          kubectl rollout status deployment/frontend \
+            -n $NAMESPACE \
+            --timeout=300s
+
+      ##################################################
+      # VERIFY
+      ##################################################
+
+      - name: Verify Deployments
+        run: |
+          kubectl get deployment -n $NAMESPACE
+
+      - name: Verify Pods
+        run: |
+          kubectl get pods -n $NAMESPACE
+
+      - name: Verify Services
+        run: |
+          kubectl get svc -n $NAMESPACE
