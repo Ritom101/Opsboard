@@ -7,6 +7,7 @@ import IncidentCard from "../components/IncidentCard"
 import SystemHealth from "../components/SystemHealth"
 import IncidentTrend from "../components/IncidentTrend"
 import AlertPanel from "../components/AlertPanel"
+import API_BASE_URL from "../config";
 
 function Dashboard() {
   const [incidents, setIncidents] = useState([])
@@ -19,14 +20,14 @@ function Dashboard() {
   })
 
   const loadStats = () => {
-    fetch("http://127.0.0.1:8000/dashboard/stats")
+    fetch(`${API_BASE_URL}/dashboard/stats`)
       .then((res) => res.json())
       .then((data) => setStats(data))
       .catch((err) => console.error(err))
   }
 
   const loadIncidents = () => {
-    fetch("http://127.0.0.1:8000/incidents")
+    fetch(`${API_BASE_URL}/incidents`)
       .then((res) => res.json())
       .then((data) => {
         setIncidents(data)
